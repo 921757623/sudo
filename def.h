@@ -3,7 +3,7 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:19
- * @LastEditTime: 2022-08-25 20:42:29
+ * @LastEditTime: 2022-08-29 15:14:26
  */
 #include <stdio.h>
 #include <time.h>
@@ -31,5 +31,4 @@ typedef struct ClauseNode
     int nodeNum;
     struct LiteralNode *head;
     struct ClauseNode *next;
-    struct ClauseNode *prior;
 } ClauseNode, *ClauseList;
