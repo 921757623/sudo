@@ -3,16 +3,17 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-08 20:54:00
- * @LastEditTime: 2022-08-30 09:09:35
+ * @LastEditTime: 2022-08-30 10:18:19
  * @endcode: UTF-8
  */
 #include "def.h"
-#include "f.h"
+#include "DPLL.h"
+#include "cnfParser.h"
 
 int main()
 {
     int op = 1, literalNum;
-    int value[1000] = {0};
+    boolean value[1000] = {false};
     ClauseList clause;
 
     while (op)
