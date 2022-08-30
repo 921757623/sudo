@@ -3,7 +3,7 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:19
- * @LastEditTime: 2022-08-29 15:14:26
+ * @LastEditTime: 2022-08-29 19:51:11
  */
 #include <stdio.h>
 #include <time.h>
@@ -28,7 +28,7 @@ typedef struct LiteralNode
 
 typedef struct ClauseNode
 {
-    int nodeNum;
+    int nodeNum; //统计文字个数
     struct LiteralNode *head;
     struct ClauseNode *next;
 } ClauseNode, *ClauseList;

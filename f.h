@@ -3,9 +3,9 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:59
- * @LastEditTime: 2022-08-29 15:14:24
+ * @LastEditTime: 2022-08-30 09:07:27
  */
-status fileInput(ClauseList &head)
+status fileInput(ClauseList &head, int &literalNum)
 {
     FILE *fp = NULL;
     head = (ClauseList)malloc(sizeof(ClauseNode));
@@ -14,7 +14,7 @@ status fileInput(ClauseList &head)
     LiteralList literalHead = NULL;
 
     char stringGot[500], fileName[100];
-    int literalNum, clauseNum, literal;
+    int clauseNum, literal;
 
     printf("请输入要打开的文件名: ");
     scanf("%s", fileName);
@@ -27,7 +27,7 @@ status fileInput(ClauseList &head)
     do
     {
         fscanf(fp, "%s", stringGot);
-    } while (!strcmp(stringGot, "p"));
+    } while (strcmp(stringGot, "cnf"));
     fscanf(fp, "%s", stringGot);
     literalNum = atoi(stringGot); //获取布尔变元量
     fscanf(fp, "%s", stringGot);
@@ -61,23 +61,21 @@ status fileInput(ClauseList &head)
     return OK;
 }
 
-status addClause(ClauseList &clause, int data[])
+status addClause(ClauseList &clause, int data)
 {
     if (clause == NULL)
         return false;
-    clause->next = (ClauseList)malloc(sizeof(ClauseNode));
-    clause = clause->next;
-    clause->nodeNum = 0;
-    clause->head = (LiteralList)malloc(sizeof(LiteralNode));
-    clause->head->next = (LiteralList)malloc(sizeof(LiteralNode));
+
+    ClauseList temp = (ClauseList)malloc(sizeof(ClauseNode));
+    temp->head = (LiteralList)malloc(sizeof(LiteralNode));
+    temp->head->next = (LiteralList)malloc(sizeof(LiteralNode));
     LiteralList head = clause->head->next;
-    for (int i = 0; data[i] != 0; i++)
-    {
-        head->data = data[i];
-        head->next = (LiteralList)malloc(sizeof(LiteralNode));
-        head = head->next;
-        clause->nodeNum++;
-    }
+
+    head->data = data;
+    clause->nodeNum = 1;
+    temp->next = clause->next;
+    clause->next = temp;
+
     return OK;
 }
 
@@ -85,14 +83,16 @@ status removeClause(ClauseList &clause)
 {
     if (clause == NULL)
         return false;
+    ClauseList clausep = clause->next;
     LiteralList temp;
-    while (clause->head != NULL)
+    while (clausep->head != NULL)
     {
-        temp = clause->head->next;
-        free(clause->head);
-        clause->head = clause->head->next;
+        temp = clausep->head->next;
+        free(clausep->head);
+        clausep->head = clausep->head->next;
     }
-    free(clause);
+    free(clausep);
+    clause->next = clause->next->next;
     return OK;
 }
 
@@ -112,41 +112,38 @@ status recordValue(ClauseList clause, int value[])
     return OK;
 }
 
-status DeleteLiteral(ClauseList &clause, int var)
+status deleteLiteral(ClauseList &clause, int var)
 {
-    LiteralList literal = clause->head->next, temp;
+    LiteralList literal = clause->head, temp;
 
-    // 处理第一个文字
-    if (literal->data == -var) // 负变元
-    {
-        temp = clause->head->next->next;
-        free(literal);
-        clause->head->next = temp;
-        return OK;
-    }
-    else if (literal->data == var)
-    {
-        clause == NULL;
-        return OK;
-    } // 正变元
-
-    // 循环处理接下来的文字
     while (literal != NULL)
     {
         if (literal->next && literal->next->data == -var)
         {
             temp = literal->next;
-            literal->next = literal->next->next;
+            literal->next = temp->next;
+            clause->nodeNum--;
             free(temp);
         }
         else if (literal->next && literal->next->data == var)
-        {
-            clause == NULL;
-            return OK;
-        }
+            return false;
         literal = literal->next;
     }
-    return OK;
+    return true;
+}
+
+ClauseList deleteClause(ClauseList &clause)
+{
+    ClauseList temp = clause->next;
+    LiteralList literal;
+    while (temp->head->next != NULL) // 先删除子句中所有文字
+    {
+        literal = clause->head->next;
+        clause->head->next = clause->head->next->next;
+        free(literal);
+    }
+    clause->next = clause->next->next;
+    free(temp);
 }
 
 /**
@@ -155,16 +152,16 @@ status DeleteLiteral(ClauseList &clause, int var)
  * @param {int} var
  * @return {*}
  */
-status removeVar(ClauseList clause, int var)
+status deleteVar(ClauseList &clause, int var)
 {
     ClauseList temp = clause->next, pre = clause;
+    int value;
     while (temp) // 循环读取每一个子句
     {
-        DeleteLiteral(temp, var); // 删除子句里所有的负变元，如果遇到了正变元则返回NULL
-        if (temp == NULL)         // 遇到了正变元
+        value = deleteLiteral(temp, var); // 删除子句里的负变元，如果遇到了正变元则返回false
+        if (value == false)               // 遇到了正变元
         {
-            DeleteClause(pre->next); // 与正变元相同则删除子句
-            pre->next = temp;
+            deleteClause(pre); // 与正变元相同则删除子句
             continue;
         }
         if (temp == NULL)
@@ -174,20 +171,17 @@ status removeVar(ClauseList clause, int var)
     }
     return OK;
 }
-
-ClauseList DeleteClause(ClauseList &clause)
+/**
+ * @description: 判断是否为单子句
+ * @param {ClauseList} clause
+ * @return {int}
+ */
+boolean isUnitClause(ClauseList clause)
 {
-    ClauseList temp = clause;
-    LiteralList literal;
-    while (clause->head->next) // 先删除子句中所有文字
-    {
-        literal = clause->head->next;
-        clause->head->next = clause->head->next->next;
-        free(literal);
-    }
-    clause = clause->next;
-    free(temp); // 再删除空子句
-    return clause;
+    if (clause->nodeNum == 1)
+        return true;
+    else
+        return false;
 }
 
 /**
@@ -207,14 +201,9 @@ ClauseList getUnitClause(ClauseList clause)
     return NULL;
 }
 
-/**
- * @description: 判断是否为单子句
- * @param {ClauseList} clause
- * @return {int}
- */
-boolean isUnitClause(ClauseList clause)
+boolean isEmptyClause(ClauseList clause)
 {
-    if (clause->nodeNum == 1)
+    if (clause->nodeNum == 0)
         return true;
     else
         return false;
@@ -244,29 +233,30 @@ boolean evaluateClause(ClauseList clause, int value[])
  * @param {int} value
  * @return {*}
  */
-status DPLL(ClauseList &clause, int value[])
+boolean DPLL(ClauseList &clause, int value[])
 {
     ClauseList headp = clause;
     ClauseList unitClause = getUnitClause(headp);
-
-    if (unitClause != NULL)
+    //单子句规则
+    while (unitClause != NULL)
     {
-        recordValue(unitClause, value);
-        int var = unitClause->head->next->data;
-        removeVar(clause, var);
+        recordValue(unitClause, value);                  //记录该单子句变量的真值
+        deleteVar(clause, unitClause->head->next->data); //在所有的字句中删除该相同变量
 
-        if (clause->next == NULL)
-            return true; // S为空
-        else if (IsEmptyClause(clause))
-            return false; // S中存在空子句
+        if (clause->next == NULL) // S为空
+            return true;
+        else if (isEmptyClause(clause)) // clause中存在空子句
+            return false;
 
         headp = clause;
         unitClause = getUnitClause(headp);
     }
-
-    int var = clause->next->head->next->data;
-    ; // 选变元
-    if (DPLL(AddClause(CopyS(clause), var), value))
-        return true;                             // 变元的真值选对了,此处传入S的拷贝
-    return DPLL(AddClause(clause, -var), value); // 变元的真值选错了
+    //分裂
+    int var = clause->next->head->next->data; // 选变元
+    addClause(clause, var);
+    if (DPLL(clause, value))
+        return true;
+    deleteClause(clause);
+    addClause(clause, -var);
+    return DPLL(clause, value); // 变元的真值选错了
 }
