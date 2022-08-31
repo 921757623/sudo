@@ -3,14 +3,10 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:59
- * @LastEditTime: 2022-08-30 11:21:39
+ * @LastEditTime: 2022-08-31 09:54:54
  */
-
 status addClause(ClauseList &clause, int data)
 {
-    if (clause == NULL)
-        return false;
-
     ClauseList temp = (ClauseList)malloc(sizeof(ClauseNode));
     temp->head = (LiteralList)malloc(sizeof(LiteralNode));
     temp->head->next = (LiteralList)malloc(sizeof(LiteralNode));
@@ -85,12 +81,12 @@ status deleteClause(ClauseList &clause)
     ClauseList temp = clause->next;
     LiteralList literal;
 
-    while (temp->head->next != NULL) // 删除子句中所有文字
+    do
     {
         literal = temp->head->next;
         temp->head->next = temp->head->next->next;
         free(literal);
-    }
+    } while (temp->head->next != NULL); // 删除子句中所有文字
     clause->next = clause->next->next;
     free(temp);
     return OK;
@@ -112,6 +108,7 @@ status deleteVar(ClauseList &clause, int var)
         if (value == false)               // 遇到了正变元
         {
             deleteClause(pre); // 与正变元相同则删除子句
+            temp = pre->next;
             continue;
         }
         if (temp == NULL)
@@ -184,6 +181,39 @@ boolean evaluateClause(ClauseList clause, int value[])
     return false;
 }
 
+ClauseList copySingleClause(ClauseList clause)
+{
+    ClauseList temp = (ClauseList)malloc(sizeof(ClauseNode));
+    temp->nodeNum = 0;
+    temp->head = (LiteralList)malloc(sizeof(LiteralNode));
+    temp->next = NULL;
+    LiteralList literal = clause->head->next, headp = temp->head;
+    do
+    {
+        headp->next = (LiteralList)malloc(sizeof(LiteralNode));
+        headp->next->data = literal->data;
+        literal = literal->next;
+        headp = headp->next;
+        headp->next = NULL;
+        temp->nodeNum++;
+    } while (literal);
+    return temp;
+}
+
+ClauseList copyClauses(ClauseList origin)
+{
+    ClauseList clause = (ClauseList)malloc(sizeof(ClauseNode));
+    clause->next = NULL;
+    ClauseList headp = clause;
+    while (origin)
+    {
+        clause->next = copySingleClause(origin);
+        clause = clause->next;
+        origin = origin->next;
+    }
+    return headp;
+}
+
 /**
  * @description: DPLL处理器
  * @param {ClauseList} &clause
@@ -211,10 +241,10 @@ boolean DPLL(ClauseList &clause, boolean value[])
     }
     //分裂
     int var = headp->head->next->data; // 选变元
-    addClause(clause, var);
-    if (DPLL(clause, value))
+    ClauseList copy = copyClauses(headp);
+    addClause(copy, var);
+    if (DPLL(copy, value))
         return true;
-    deleteClause(clause);
     addClause(clause, -var);
-    return DPLL(clause, value); // 变元的真值选错了
+    return DPLL(clause, value);
 }

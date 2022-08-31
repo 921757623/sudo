@@ -3,7 +3,7 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-08 20:54:00
- * @LastEditTime: 2022-08-30 10:18:19
+ * @LastEditTime: 2022-08-31 09:42:50
  * @endcode: UTF-8
  */
 #include "def.h"
@@ -15,6 +15,7 @@ int main()
     int op = 1, literalNum;
     boolean value[1000] = {false};
     ClauseList clause;
+    clock_t start, end;
 
     while (op)
     {
@@ -33,17 +34,21 @@ int main()
         case 1:
             fileInput(clause, literalNum);
             printf("DPLL开始运行...\n");
+            start = clock();
             DPLL(clause, value);
+            end = (clock() - start);
             printf("DPLL运行完毕!\n");
-            for (int i = 0; i < literalNum; i++)
+            printf("用时：%ld\n", end);
+            for (int i = 1; i <= literalNum; i++)
             {
-                printf("%d ", value[i]);
+                if (value[i - 1] == true)
+                    printf("%d ", i);
+                else
+                    printf("%d ", -i);
                 if (i % 5 == 0)
                     printf("\n");
             }
-
             break;
-
         default:
             break;
         }

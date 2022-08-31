@@ -3,7 +3,7 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-30 10:17:28
- * @LastEditTime: 2022-08-30 10:36:58
+ * @LastEditTime: 2022-08-31 08:56:06
  */
 
 status createClause(ClauseList &clause, FILE *fp)
@@ -17,10 +17,11 @@ status createClause(ClauseList &clause, FILE *fp)
     clause->nodeNum = 0;
     clause->head = (LiteralList)malloc(sizeof(LiteralNode));
     clause->head->next = (LiteralList)malloc(sizeof(LiteralNode));
-    LiteralList literalHead = clause->head->next;
+    LiteralList literalHead = clause->head;
 
     do
     {
+        literalHead = literalHead->next;
         //读取
         fscanf(fp, "%s", buffer);
         literal = atoi(buffer);
@@ -29,9 +30,9 @@ status createClause(ClauseList &clause, FILE *fp)
         clause->nodeNum++;
         //链表传递
         literalHead->next = (LiteralList)malloc(sizeof(LiteralNode));
-        literalHead = literalHead->next;
-        literalHead->next = NULL;
     } while (literal != 0);
+    free(literalHead->next);
+    literalHead->next = NULL;
     return OK;
 }
 
