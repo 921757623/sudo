@@ -3,13 +3,15 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:19
- * @LastEditTime: 2022-08-29 19:51:11
+ * @LastEditTime: 2022-09-01 21:01:50
  */
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
+#include <unistd.h>
 
 typedef int status;
 typedef int boolean;
@@ -32,3 +34,10 @@ typedef struct ClauseNode
     struct LiteralNode *head;
     struct ClauseNode *next;
 } ClauseNode, *ClauseList;
+
+typedef struct parameter
+{
+    ClauseList clause;
+    boolean value[1000];
+    int literalNum;
+} parameter, *param;

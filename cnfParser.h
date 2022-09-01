@@ -3,7 +3,7 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-30 10:17:28
- * @LastEditTime: 2022-08-31 08:56:06
+ * @LastEditTime: 2022-09-01 12:11:13
  */
 
 status createClause(ClauseList &clause, FILE *fp)
@@ -13,25 +13,26 @@ status createClause(ClauseList &clause, FILE *fp)
     //初始化
     clause->next = (ClauseList)malloc(sizeof(ClauseNode));
     clause = clause->next;
-    clause->next = NULL;
     clause->nodeNum = 0;
     clause->head = (LiteralList)malloc(sizeof(LiteralNode));
     clause->head->next = (LiteralList)malloc(sizeof(LiteralNode));
     LiteralList literalHead = clause->head;
+    literalHead->next = NULL;
 
-    do
+    while (2233)
     {
-        literalHead = literalHead->next;
         //读取
         fscanf(fp, "%s", buffer);
         literal = atoi(buffer);
         //赋值
-        literalHead->data = literal;
-        clause->nodeNum++;
+        if (literal == 0)
+            break;
         //链表传递
         literalHead->next = (LiteralList)malloc(sizeof(LiteralNode));
-    } while (literal != 0);
-    free(literalHead->next);
+        literalHead = literalHead->next;
+        literalHead->data = literal;
+        clause->nodeNum++;
+    }
     literalHead->next = NULL;
     return OK;
 }
@@ -50,7 +51,7 @@ status fileInput(ClauseList &clause, int &literalNum)
     if ((fp = fopen(fileName, "r")) == NULL)
     {
         printf("打开文件失败!\n");
-        exit(1);
+        return ERROR;
     }
 
     do
@@ -66,6 +67,7 @@ status fileInput(ClauseList &clause, int &literalNum)
     {
         createClause(clause, fp);
     }
+    clause->next = NULL;
 
     clause = headp;
     fclose(fp);

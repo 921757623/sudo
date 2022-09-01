@@ -3,8 +3,11 @@
  * @version: 1.0.0
  * @Author: yrp
  * @Date: 2022-08-21 19:18:59
- * @LastEditTime: 2022-08-31 09:54:54
+ * @LastEditTime: 2022-09-01 21:11:36
  */
+void *main_thread(void *arg);
+void *count_thread(void *arg);
+
 status addClause(ClauseList &clause, int data)
 {
     ClauseList temp = (ClauseList)malloc(sizeof(ClauseNode));
@@ -45,7 +48,6 @@ status recordValue(ClauseList clause, boolean value[])
         value[head->data - 1] = true;
     else
         value[abs(head->data) - 1] = false;
-    head = head->next;
 
     return OK;
 }
@@ -62,10 +64,11 @@ status deleteLiteral(ClauseList &clause, int var)
 
     while (literal != NULL && literal->next != NULL)
     {
+        pthread_testcancel();
         if (literal->next->data == -var)
         {
             temp = literal->next;
-            literal->next = temp->next;
+            literal->next = literal->next->next;
             clause->nodeNum--;
             free(temp);
         }
@@ -80,7 +83,6 @@ status deleteClause(ClauseList &clause)
 {
     ClauseList temp = clause->next;
     LiteralList literal;
-
     do
     {
         literal = temp->head->next;
@@ -104,6 +106,7 @@ status deleteVar(ClauseList &clause, int var)
     int value;
     while (temp) // 循环读取每一个子句
     {
+        pthread_testcancel();
         value = deleteLiteral(temp, var); // 删除子句里的负变元，如果遇到了正变元则返回false
         if (value == false)               // 遇到了正变元
         {
@@ -169,12 +172,17 @@ boolean isEmptyClause(ClauseList clause)
  * @param {int} value
  * @return {int}
  */
-boolean evaluateClause(ClauseList clause, int value[])
+boolean evaluateClause(ClauseList clause, boolean value[])
 {
     LiteralList head = clause->head->next;
-    for (int i = 0; head->data != 0; i++)
+    while (head)
     {
-        if (value[head->data] == true)
+        if (head->data > 0)
+            if (value[head->data - 1] == true)
+                return true;
+            else
+                ;
+        else if (value[abs(head->data) - 1] == false)
             return true;
         head = head->next;
     }
@@ -187,8 +195,9 @@ ClauseList copySingleClause(ClauseList clause)
     temp->nodeNum = 0;
     temp->head = (LiteralList)malloc(sizeof(LiteralNode));
     temp->next = NULL;
+    temp->head->next = NULL;
     LiteralList literal = clause->head->next, headp = temp->head;
-    do
+    while (literal)
     {
         headp->next = (LiteralList)malloc(sizeof(LiteralNode));
         headp->next->data = literal->data;
@@ -196,7 +205,7 @@ ClauseList copySingleClause(ClauseList clause)
         headp = headp->next;
         headp->next = NULL;
         temp->nodeNum++;
-    } while (literal);
+    }
     return temp;
 }
 
@@ -223,7 +232,7 @@ ClauseList copyClauses(ClauseList origin)
 boolean DPLL(ClauseList &clause, boolean value[])
 {
     ClauseList headp = clause->next;
-
+    pthread_testcancel();
     //单子句规则
     ClauseList unitClause = getUnitClause(headp);
     while (unitClause != NULL)
@@ -247,4 +256,69 @@ boolean DPLL(ClauseList &clause, boolean value[])
         return true;
     addClause(clause, -var);
     return DPLL(clause, value);
+}
+
+status check(ClauseList clause, boolean value[])
+{
+    int count = 1;
+    clause = clause->next;
+    while (clause)
+    {
+        if (!evaluateClause(clause, value))
+        {
+            printf("%d false!\n", count);
+        }
+        count++;
+        clause = clause->next;
+    }
+    return OK;
+}
+
+void *main_thread(void *arg)
+{
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+    param params = (param)arg;
+    clock_t start;
+    float end;
+    start = clock();
+    DPLL(params->clause, params->value);
+    end = ((float)(clock() - start)) / CLOCKS_PER_SEC;
+    printf("DPLL运行完毕!\n");
+    printf("用时：%g 秒\n", end);
+    if (pthread_cancel(1) != 0)
+    {
+        printf("中止计时线程失败！\n");
+    }
+    printf("结果为：");
+    for (int i = 1; i <= params->literalNum; i++)
+    {
+        if (params->value[i - 1] == true)
+            printf("%d ", i);
+        else
+            printf("%d ", -i);
+        if (i % 5 == 0)
+            printf("\n");
+    }
+
+    printf("开始校验结果...\n");
+    check(params->clause, params->value);
+    printf("校验成功！\n");
+}
+
+void *count_thread(void *arg)
+{
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    clock_t start, end;
+    start = clock();
+    while (end < 10)
+    {
+        end = (clock() - start) / CLOCKS_PER_SEC;
+        pthread_testcancel();
+    }
+    if (pthread_cancel(2) != 0)
+        printf("终止DPLL线程失败！\n");
+    else
+        printf("程序运行超时！\n");
 }

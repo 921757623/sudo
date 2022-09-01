@@ -1,2 +1,1 @@
-;
-            printf("DPLL运行完毕!\n");
+((float)(clock() - start)) / CLOCKS_PER_SEC;
